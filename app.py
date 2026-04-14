@@ -245,24 +245,61 @@ if build_btn and st.session_state.product_value:
     if standard_list and tnved_list and st.session_state.product_table:
         rows = []
         all_product_sections = set().union(*[row['_sections'] for row in st.session_state.product_table])
+        
+        st.write("### 🐞 ОТЛАДКА ТАБЛИЦЫ 3")
+        st.write(f"Введённые стандарты: {standard_list}")
+        st.write(f"Введённые ТН ВЭД: {tnved_list}")
+        st.write(f"Разделы продукции: {all_product_sections}")
+        
         for std in standard_list:
+            std_lower = std.lower()
+            st.write(f"--- Проверяем стандарт: '{std}' ---")
+            
             for code in tnved_list:
-                sections = filter_by_standard_and_tnved(lab, std, code, all_product_sections)
-                for sec in sections:
+                st.write(f"  ТН ВЭД: '{code}'")
+                found_any = False
+                
+                for section in lab.sections:
+                    # Проверяем стандарт
                     full_std_name = std
-                    for section in lab.sections:
-                        if section.full_id == sec:
-                            for s in section.standards:
-                                if std.lower() in s.lower():
-                                    full_std_name = s
-                                    break
+                    std_found = False
+                    for s in section.standards:
+                        if std_lower in s.lower():
+                            full_std_name = s
+                            std_found = True
                             break
+                    
+                    if not std_found:
+                        continue
+                    
+                    # Проверяем ТН ВЭД
+                    tnved_found = False
+                    for tn in section.tnved_codes:
+                        if code in tn:
+                            tnved_found = True
+                            break
+                    
+                    if not tnved_found:
+                        continue
+                    
+                    # Проверяем продукцию
+                    if section.full_id not in all_product_sections:
+                        st.write(f"    ❌ Раздел {section.full_id} не в продукции")
+                        continue
+                    
+                    found_any = True
+                    st.write(f"    ✅ НАЙДЕН: раздел {section.full_id}, стандарт {full_std_name}")
+                    
                     rows.append({
                         'Стандарт': full_std_name,
                         'ТН ВЭД': code,
-                        'Разделы': group_sections_for_display({sec}),
-                        '_sections': {sec}
+                        'Разделы': group_sections_for_display({section.full_id}),
+                        '_sections': {section.full_id}
                     })
+                
+                if not found_any:
+                    st.write(f"    ❌ Ничего не найдено для '{std}' + '{code}'")
+        
         st.session_state.standard_table = rows if rows else None
     else:
         st.session_state.standard_table = None
