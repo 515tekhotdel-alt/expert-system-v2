@@ -53,7 +53,7 @@ def render_indicators_result(indicators: List[Dict]):
             html += '<thead><tr><th>Показатель</th><th>Значение</th></tr></thead><tbody>'
             
             for ind in inds:
-                name = ind.get('name', '')
+                name = ind.get('name', '').strip()  # убираем \n в начале и конце
                 range_val = ind.get('range', '').replace('\n', '<br>')
                 html += f'<tr><td>{name}</td><td>{range_val}</td></tr>'
             
