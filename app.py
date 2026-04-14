@@ -5,14 +5,12 @@
 
 import streamlit as st
 
-# Заглушки для импорта будущих модулей
-# from models import Laboratory
-# from data_loader import load_laboratory_data
-# from ui.sidebar import render_sidebar
-# from ui.inputs import render_inputs
-# from ui.tables import render_tables
-# from ui.buttons import render_buttons
-# from ui.results import render_results
+from ui.sidebar import render_sidebar
+from ui.inputs import render_inputs
+from ui.buttons import render_buttons
+from ui.tables import render_product_table, render_tnved_table, render_standard_table
+from ui.results import render_intersection, render_indicators
+from ui.styles import apply_styles
 
 # ============================================================
 # КОНФИГУРАЦИЯ СТРАНИЦЫ
@@ -24,23 +22,31 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Применяем стили
+apply_styles()
+
 # ============================================================
 # ЗАГОЛОВОК
 # ============================================================
 st.title("🔬 Экспертная система ИЛ v2.0")
+
+# ============================================================
+# САЙДБАР
+# ============================================================
+render_sidebar()
+
+# ============================================================
+# ОСНОВНОЙ ИНТЕРФЕЙС
+# ============================================================
+st.markdown("### 📦 Продукция")
+render_inputs()
+
 st.markdown("---")
+render_buttons()
 
-# ============================================================
-# ЗАГЛУШКА ОСНОВНОГО ИНТЕРФЕЙСА
-# ============================================================
-st.info("🚧 Программа в разработке. Следите за обновлениями!")
-st.markdown("Пока здесь только каркас приложения.")
+render_intersection()
+render_indicators()
 
-# ============================================================
-# САЙДБАР (заглушка)
-# ============================================================
-with st.sidebar:
-    st.header("🔬 Лаборатория")
-    st.selectbox("Выберите лабораторию:", ["ИЛ ЦТС", "ИЛ ТЕХЭКСПЕРТ"])
-    st.divider()
-    st.button("⚡ Тестовые данные", disabled=True)
+render_product_table()
+render_tnved_table()
+render_standard_table()
