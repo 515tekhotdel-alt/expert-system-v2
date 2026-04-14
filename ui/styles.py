@@ -36,7 +36,7 @@ def apply_styles():
         .indicators-table {
             border-collapse: collapse;
             width: 100%;
-            font-size: 24px;
+            font-size: 16px;
             margin: 5px 0;
         }
         

@@ -13,6 +13,7 @@ from ui.sidebar import render_sidebar
 from ui.tables import render_product_table, render_tnved_table, render_standard_table
 from ui.results import render_intersection_result, render_indicators_result
 from ui.styles import apply_styles
+from datetime import datetime
 
 # ============================================================
 # КОНФИГУРАЦИЯ СТРАНИЦЫ
@@ -150,21 +151,21 @@ product_input = st_keyup(
 )
 st.session_state.product_value = product_input
 
-# Живые подсказки
+
+# Живые подсказки (только если поле в фокусе)
 if product_input and len(product_input) >= 2:
     lab = st.session_state.lab
     all_products = lab.get_all_products()
     suggestions = [p for p in all_products if product_input.lower() in p.lower()]
     if suggestions:
-        st.markdown(f"**📋 Найдено в области ({len(suggestions)}):**")
-        suggestions_text = ""
-        for s in suggestions[:15]:
-            suggestions_text += f"• {s}\n"
-        if len(suggestions) > 15:
-            suggestions_text += f"... и еще {len(suggestions)-15}"
-        st.text(suggestions_text)
-    else:
-        st.warning("❌ Ничего не найдено")
+        with st.container():
+            st.markdown(f"**📋 Найдено в области ({len(suggestions)}):**")
+            suggestions_text = ""
+            for s in suggestions[:15]:
+                suggestions_text += f"• {s}\n"
+            if len(suggestions) > 15:
+                suggestions_text += f"... и еще {len(suggestions)-15}"
+            st.text(suggestions_text)
 
 # ============================================================
 # ФОРМА (ТН ВЭД, Стандарты, кнопки)
@@ -284,91 +285,233 @@ if build_btn and st.session_state.product_value:
     st.rerun()
 
 # ============================================================
-# ПАНЕЛЬ КНОПОК УПРАВЛЕНИЯ
+# ПАНЕЛЬ КНОПОК УПРАВЛЕНИЯ (всегда видна)
 # ============================================================
-if st.session_state.tables_built:
-    st.markdown("---")
-    col1, col2, col3, col4 = st.columns(4)
+tables_built = st.session_state.get('tables_built', False)
+intersection_ready = st.session_state.get('intersection_ready', False)
+indicators_ready = st.session_state.get('indicators_result') is not None
+
+st.markdown("---")
+
+# Первая строка кнопок
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    if 'select_all_state' not in st.session_state:
+        st.session_state.select_all_state = False
     
-    with col1:
-        if st.button("🌍 Выбрать все", use_container_width=True, key="btn_select_all"):
-            if st.session_state.product_table:
-                for i in range(len(st.session_state.product_table)):
-                    st.session_state[f"prod_cb_{i}"] = True
-                    st.session_state.product_checkboxes[i] = True
-            if st.session_state.tnved_table:
-                for i in range(len(st.session_state.tnved_table)):
-                    st.session_state[f"tnved_cb_{i}"] = True
-                    st.session_state.tnved_checkboxes[i] = True
-            if st.session_state.standard_table:
-                for i in range(len(st.session_state.standard_table)):
-                    st.session_state[f"std_cb_{i}"] = True
-                    st.session_state.standard_checkboxes[i] = True
-            st.rerun()
+    button_label = "🌍 Убрать все" if st.session_state.select_all_state else "🌍 Выбрать все"
+    button_type = "secondary" if st.session_state.select_all_state else "primary"
     
-    with col2:
-        if st.button("🔍 Пересечение", type="primary", use_container_width=True, key="btn_intersect"):
-            selected_product_sections = set()
-            selected_tnved_sections = set()
-            selected_standard_sections = set()
+    if st.button(button_label, type=button_type, disabled=not tables_built, use_container_width=True, key="btn_select_all"):
+        new_value = not st.session_state.select_all_state
+        if st.session_state.get('product_table'):
+            for i in range(len(st.session_state.product_table)):
+                st.session_state[f"prod_cb_{i}"] = new_value
+                st.session_state.product_checkboxes[i] = new_value
+        if st.session_state.get('tnved_table'):
+            for i in range(len(st.session_state.tnved_table)):
+                st.session_state[f"tnved_cb_{i}"] = new_value
+                st.session_state.tnved_checkboxes[i] = new_value
+        if st.session_state.get('standard_table'):
+            for i in range(len(st.session_state.standard_table)):
+                st.session_state[f"std_cb_{i}"] = new_value
+                st.session_state.standard_checkboxes[i] = new_value
+        st.session_state.select_all_state = new_value
+        st.rerun()
+
+with col2:
+    if st.button("🔍 Пересечение", type="primary", disabled=not tables_built, use_container_width=True, key="btn_intersect"):
+        selected_product_sections = set()
+        selected_tnved_sections = set()
+        selected_standard_sections = set()
+        
+        if st.session_state.get('product_table'):
+            for idx, row in enumerate(st.session_state.product_table):
+                if st.session_state.get(f"prod_cb_{idx}", False):
+                    selected_product_sections.update(row['_sections'])
+        
+        if st.session_state.get('tnved_table'):
+            for idx, row in enumerate(st.session_state.tnved_table):
+                if st.session_state.get(f"tnved_cb_{idx}", False):
+                    selected_tnved_sections.update(row['_sections'])
+        
+        if st.session_state.get('standard_table'):
+            for idx, row in enumerate(st.session_state.standard_table):
+                if st.session_state.get(f"std_cb_{idx}", False):
+                    selected_standard_sections.update(row['_sections'])
+        
+        if selected_tnved_sections:
+            common = selected_product_sections & selected_tnved_sections
+            if selected_standard_sections:
+                common = common & selected_standard_sections
+        else:
+            common = selected_product_sections
+        
+        st.session_state.intersection_result = common
+        st.session_state.intersection_ready = bool(common)
+        st.rerun()
+
+with col3:
+    if st.button("📋 Показатели", disabled=not intersection_ready, use_container_width=True, key="btn_indicators"):
+        from logic import extract_indicators
+        
+        lab = st.session_state.lab
+        common_sections = st.session_state.intersection_result
+        
+        selected_std_names = []
+        if st.session_state.get('standard_table'):
+            for idx, row in enumerate(st.session_state.standard_table):
+                if st.session_state.get(f"std_cb_{idx}", False):
+                    selected_std_names.append(row['Стандарт'])
+        
+        indicators = extract_indicators(lab, common_sections, selected_std_names)
+        st.session_state.indicators_result = indicators
+        st.rerun()
+
+with col4:
+    pass  # пустая колонка
+
+# Вторая строка кнопок (Экспорт)
+col_exp1, col_exp2, col_exp3, col_exp4 = st.columns([1, 1, 1, 1])
+
+with col_exp2:
+    if st.button("📄 Подготовить отчёт", 
+                 disabled=not indicators_ready,
+                 use_container_width=True,
+                 key="btn_prepare_export"):
+        if st.session_state.indicators_result:
+            import pandas as pd
+            import io
             
-            if st.session_state.product_table:
-                for idx, row in enumerate(st.session_state.product_table):
-                    if st.session_state.get(f"prod_cb_{idx}", False):
-                        selected_product_sections.update(row['_sections'])
+            output = io.BytesIO()
+            all_rows = []
             
-            if st.session_state.tnved_table:
-                for idx, row in enumerate(st.session_state.tnved_table):
-                    if st.session_state.get(f"tnved_cb_{idx}", False):
-                        selected_tnved_sections.update(row['_sections'])
+            # Параметры поиска
+            all_rows.append({'Раздел': 'ПАРАМЕТРЫ ПОИСКА', 'Параметр': '', 'Значение': ''})
+            all_rows.append({'Раздел': '', 'Параметр': 'Лаборатория', 'Значение': st.session_state.current_lab})
+            all_rows.append({'Раздел': '', 'Параметр': 'Продукция', 'Значение': st.session_state.product_value})
+            all_rows.append({'Раздел': '', 'Параметр': 'Коды ТН ВЭД', 'Значение': st.session_state.tnved_value})
+            all_rows.append({'Раздел': '', 'Параметр': 'Стандарты', 'Значение': st.session_state.standard_value})
+            all_rows.append({'Раздел': '', 'Параметр': '', 'Значение': ''})
             
-            if st.session_state.standard_table:
-                for idx, row in enumerate(st.session_state.standard_table):
-                    if st.session_state.get(f"std_cb_{idx}", False):
-                        selected_standard_sections.update(row['_sections'])
+            # Таблица 1
+            if st.session_state.get('product_table'):
+                all_rows.append({'Раздел': 'ТАБЛИЦА 1. ПРОДУКЦИЯ', 'Параметр': '', 'Значение': ''})
+                for row in st.session_state.product_table:
+                    all_rows.append({'Раздел': '', 'Параметр': row['Формулировка продукции'], 'Значение': row['Разделы']})
+                all_rows.append({'Раздел': '', 'Параметр': '', 'Значение': ''})
             
-            if selected_tnved_sections:
-                common = selected_product_sections & selected_tnved_sections
-                if selected_standard_sections:
-                    common = common & selected_standard_sections
-            else:
-                common = selected_product_sections
+            # Таблица 2
+            if st.session_state.get('tnved_table'):
+                all_rows.append({'Раздел': 'ТАБЛИЦА 2. ТН ВЭД', 'Параметр': '', 'Значение': ''})
+                for row in st.session_state.tnved_table:
+                    all_rows.append({'Раздел': '', 'Параметр': row['ТН ВЭД'], 'Значение': row['Разделы']})
+                all_rows.append({'Раздел': '', 'Параметр': '', 'Значение': ''})
             
-            st.session_state.intersection_result = common
-            st.session_state.intersection_ready = bool(common)
-            st.rerun()
-    
-    with col3:
-        if st.button("📋 Показатели", disabled=not st.session_state.intersection_ready, use_container_width=True, key="btn_indicators"):
-            from logic import extract_indicators
+            # Таблица 3
+            if st.session_state.get('standard_table'):
+                all_rows.append({'Раздел': 'ТАБЛИЦА 3. СТАНДАРТЫ', 'Параметр': '', 'Значение': ''})
+                for row in st.session_state.standard_table:
+                    all_rows.append({
+                        'Раздел': '', 
+                        'Параметр': f"{row['Стандарт']} ({row['ТН ВЭД']})", 
+                        'Значение': row['Разделы']
+                    })
+                all_rows.append({'Раздел': '', 'Параметр': '', 'Значение': ''})
             
-            lab = st.session_state.lab
-            common_sections = st.session_state.intersection_result
+            # Пересечение
+            if st.session_state.get('intersection_result'):
+                from logic import group_sections_for_display
+                all_rows.append({'Раздел': 'РЕЗУЛЬТАТ ПЕРЕСЕЧЕНИЯ', 'Параметр': '', 'Значение': ''})
+                all_rows.append({'Раздел': '', 'Параметр': 'Общие разделы', 'Значение': group_sections_for_display(st.session_state.intersection_result)})
+                all_rows.append({'Раздел': '', 'Параметр': '', 'Значение': ''})
             
-            selected_std_names = []
-            if st.session_state.standard_table:
-                for idx, row in enumerate(st.session_state.standard_table):
-                    if st.session_state.get(f"std_cb_{idx}", False):
-                        selected_std_names.append(row['Стандарт'])
-            
-            indicators = extract_indicators(lab, common_sections, selected_std_names)
-            st.session_state.indicators_result = indicators
-            st.rerun()
-    
-    with col4:
-        if st.button("💾 Экспорт", disabled=st.session_state.get('indicators_result') is None, use_container_width=True, key="btn_export"):
+            # Показатели — ОТДЕЛЬНЫЙ БЛОК С 4 КОЛОНКАМИ
             if st.session_state.indicators_result:
-                import pandas as pd
-                from datetime import datetime
+                # Создаём отдельный DataFrame для показателей
+                indicators_data = []
+                for ind in st.session_state.indicators_result:
+                    std = ind.get('standard', '—')
+                    sec = ind.get('section', '—')
+                    name = ind.get('name', '')
+                    range_val = ind.get('range', '')
+                    
+                    # Форматируем раздел
+                    if '_' in sec:
+                        src, num = sec.split('_', 1)
+                        display_sec = f"{src}:{num}"
+                    else:
+                        display_sec = sec
+                    
+                    # Стандарт с разделом в скобках
+                    std_with_sec = f"{std} ({display_sec})"
+                    
+                    # Заменяем <br> и \n на перенос строки для Excel
+                    range_val_excel = range_val.replace('<br>', '\n').replace('\r\n', '\n').replace('\r', '\n')
+                    
+                    indicators_data.append({
+                        'Стандарт': std_with_sec,
+                        'Показатель': name,
+                        'Значение': range_val_excel
+                    })
                 
-                df = pd.DataFrame(st.session_state.indicators_result)
-                csv = df.to_csv(index=False).encode('utf-8-sig')
-                st.download_button(
-                    label="Скачать CSV",
-                    data=csv,
-                    file_name=f"indicators_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                    mime="text/csv"
-                )
+                df_indicators = pd.DataFrame(indicators_data)
+                
+                # Сохраняем в Excel
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    # Сначала пишем основные данные на лист "Отчёт"
+                    df_main = pd.DataFrame(all_rows)
+                    df_main.to_excel(writer, sheet_name='Отчёт', index=False)
+                    
+                    # Затем показатели на отдельный лист
+                    df_indicators.to_excel(writer, sheet_name='Показатели', index=False)
+                    
+                    # Настраиваем ширину столбцов для листа "Отчёт"
+                    worksheet_main = writer.sheets['Отчёт']
+                    worksheet_main.column_dimensions['A'].width = 30
+                    worksheet_main.column_dimensions['B'].width = 45
+                    worksheet_main.column_dimensions['C'].width = 50
+                    
+                    # Настраиваем ширину и перенос текста для листа "Показатели"
+                    worksheet_ind = writer.sheets['Показатели']
+                    worksheet_ind.column_dimensions['A'].width = 40
+                    worksheet_ind.column_dimensions['B'].width = 35
+                    worksheet_ind.column_dimensions['C'].width = 50
+                    
+                    # Включаем перенос текста для всех ячеек листа "Показатели"
+                    from openpyxl.styles import Alignment
+                    for row in worksheet_ind.iter_rows():
+                        for cell in row:
+                            cell.alignment = Alignment(wrap_text=True)
+            
+            else:
+                # Если показателей нет, просто сохраняем основные данные
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df_main = pd.DataFrame(all_rows)
+                    df_main.to_excel(writer, sheet_name='Отчёт', index=False)
+                    worksheet_main = writer.sheets['Отчёт']
+                    worksheet_main.column_dimensions['A'].width = 30
+                    worksheet_main.column_dimensions['B'].width = 45
+                    worksheet_main.column_dimensions['C'].width = 50
+            
+            output.seek(0)
+            st.session_state.export_data = output.getvalue()
+            st.session_state.export_ready = True
+            st.rerun()
+
+with col_exp3:
+    if st.session_state.get('export_ready', False):
+        st.download_button(
+            label="📥 Скачать",
+            data=st.session_state.export_data,
+            file_name=f"Экспертная_оценка_{st.session_state.current_lab}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="download_export_file",
+            use_container_width=True
+        )
+    else:
+        st.button("📥 Скачать", disabled=True, use_container_width=True, key="btn_download_disabled")
 
 # ============================================================
 # ОТОБРАЖЕНИЕ РЕЗУЛЬТАТОВ
