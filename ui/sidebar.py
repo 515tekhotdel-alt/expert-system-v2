@@ -27,19 +27,3 @@ def render_sidebar(labs_data: Dict[str, Laboratory], current_lab: str):
         st.markdown("### 📊 Статистика")
         st.write(f"**Всего разделов:** {len(lab.sections)}")
         st.write(f"**Продукции:** {len(lab.get_all_products())}")
-
-        # ОТЛАДКА ТАБЛИЦЫ 3 (временно)
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### 🐞 ОТЛАДКА")
-
-        if st.sidebar.button("Показать состояние"):
-            st.sidebar.write(f"standard_list: {st.session_state.get('standard_list', 'не задано')}")
-            st.sidebar.write(f"tnved_list: {st.session_state.get('tnved_list', 'не задано')}")
-            st.sidebar.write(f"product_table: {'есть' if st.session_state.get('product_table') else 'нет'}")
-            st.sidebar.write(f"standard_table строк: {len(st.session_state.get('standard_table', []))}")
-            st.sidebar.write(f"standard_value (сырое): '{st.session_state.get('standard_value', '')}'")
-
-            all_sections = st.session_state.get('all_product_sections_debug', [])
-            st.sidebar.write(f"all_product_sections: {len(all_sections)} разделов")
-            if all_sections:
-                st.sidebar.write(f"Примеры: {all_sections[:5]}")

@@ -68,5 +68,34 @@ def apply_styles():
             font-weight: 600 !important;
             margin: 8px 0px 3px 0px !important;
         }
+           
+               /* Градиентный заголовок лаборатории */
+        .lab-name {
+            display: inline-block;
+            padding: 12px 30px;
+            border-radius: 40px;
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            margin-top: 5px;
+        }
+        
+        .lab-cts {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .lab-tehexpert {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .main-title {
+            font-size: 20px;
+            font-weight: 400;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        
+        
     </style>
     """, unsafe_allow_html=True)

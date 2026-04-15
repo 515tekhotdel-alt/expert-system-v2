@@ -131,7 +131,15 @@ init_session_state()
 # ============================================================
 # ЗАГОЛОВОК
 # ============================================================
-st.title(f"🔬 Экспертная система ИЛ v2.0 — {st.session_state.current_lab}")
+# Заголовок с градиентной плашкой только для лаборатории
+lab_class = "lab-cts" if st.session_state.current_lab == "ИЛ ЦТС" else "lab-tehexpert"
+
+st.markdown(f"""
+<div style="margin-bottom: 20px;">
+    <div class="main-title">🔬 Экспертная система ИЛ v2.0</div>
+    <span class="lab-name {lab_class}">🏭 {st.session_state.current_lab}</span>
+</div>
+""", unsafe_allow_html=True)
 
 # ============================================================
 # САЙДБАР
@@ -378,23 +386,23 @@ with col2:
         st.session_state.intersection_ready = bool(common)
         st.rerun()
 
-with col3:
-    if st.button("📋 Показатели", disabled=not intersection_ready, use_container_width=True, key="btn_indicators"):
-        from logic import extract_indicators
+    with col3:
+        if st.button("📋 Показатели", disabled=not intersection_ready, use_container_width=True, key="btn_indicators"):
+            from logic import extract_indicators
 
-        lab = st.session_state.lab
-        common_sections = st.session_state.intersection_result
+            lab = st.session_state.lab
+            common_sections = st.session_state.intersection_result
 
-        selected_std_names = []
-        if st.session_state.get('standard_table'):
-            for idx, row in enumerate(st.session_state.standard_table):
-                if st.session_state.get(f"std_cb_{idx}", False):
-                    selected_std_names.append(row['Стандарт'])
+            selected_std_names = []
+            if st.session_state.get('standard_table'):
+                for idx, row in enumerate(st.session_state.standard_table):
+                    if st.session_state.get(f"std_cb_{idx}", False):
+                        selected_std_names.append(row['Стандарт'])
 
-        indicators = extract_indicators(lab, common_sections, selected_std_names)
-        st.session_state.indicators_result = indicators
-        st.rerun()
-
+            indicators = extract_indicators(lab, common_sections, selected_std_names)
+            st.session_state.indicators_result = indicators
+            st.session_state.export_ready = False  # ← СБРАСЫВАЕМ ЭКСПОРТ
+            st.rerun()
 
 # Вторая строка кнопок (Экспорт)
 col_exp1, col_exp2, col_exp3, col_exp4 = st.columns([1, 1, 1, 1])
