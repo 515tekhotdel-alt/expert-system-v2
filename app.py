@@ -318,16 +318,17 @@ indicators_ready = st.session_state.get('indicators_result') is not None
 st.markdown("---")
 
 # Первая строка кнопок
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     if 'select_all_state' not in st.session_state:
         st.session_state.select_all_state = False
-    
+
     button_label = "🌍 Убрать все" if st.session_state.select_all_state else "🌍 Выбрать все"
     button_type = "secondary" if st.session_state.select_all_state else "primary"
-    
-    if st.button(button_label, type=button_type, disabled=not tables_built, use_container_width=True, key="btn_select_all"):
+
+    if st.button(button_label, type=button_type, disabled=not tables_built, use_container_width=True,
+                 key="btn_select_all"):
         new_value = not st.session_state.select_all_state
         if st.session_state.get('product_table'):
             for i in range(len(st.session_state.product_table)):
@@ -345,33 +346,34 @@ with col1:
         st.rerun()
 
 with col2:
-    if st.button("🔍 Пересечение", type="primary", disabled=not tables_built, use_container_width=True, key="btn_intersect"):
+    if st.button("🔍 Пересечение", type="primary", disabled=not tables_built, use_container_width=True,
+                 key="btn_intersect"):
         selected_product_sections = set()
         selected_tnved_sections = set()
         selected_standard_sections = set()
-        
+
         if st.session_state.get('product_table'):
             for idx, row in enumerate(st.session_state.product_table):
                 if st.session_state.get(f"prod_cb_{idx}", False):
                     selected_product_sections.update(row['_sections'])
-        
+
         if st.session_state.get('tnved_table'):
             for idx, row in enumerate(st.session_state.tnved_table):
                 if st.session_state.get(f"tnved_cb_{idx}", False):
                     selected_tnved_sections.update(row['_sections'])
-        
+
         if st.session_state.get('standard_table'):
             for idx, row in enumerate(st.session_state.standard_table):
                 if st.session_state.get(f"std_cb_{idx}", False):
                     selected_standard_sections.update(row['_sections'])
-        
+
         if selected_tnved_sections:
             common = selected_product_sections & selected_tnved_sections
             if selected_standard_sections:
                 common = common & selected_standard_sections
         else:
             common = selected_product_sections
-        
+
         st.session_state.intersection_result = common
         st.session_state.intersection_ready = bool(common)
         st.rerun()
@@ -379,22 +381,20 @@ with col2:
 with col3:
     if st.button("📋 Показатели", disabled=not intersection_ready, use_container_width=True, key="btn_indicators"):
         from logic import extract_indicators
-        
+
         lab = st.session_state.lab
         common_sections = st.session_state.intersection_result
-        
+
         selected_std_names = []
         if st.session_state.get('standard_table'):
             for idx, row in enumerate(st.session_state.standard_table):
                 if st.session_state.get(f"std_cb_{idx}", False):
                     selected_std_names.append(row['Стандарт'])
-        
+
         indicators = extract_indicators(lab, common_sections, selected_std_names)
         st.session_state.indicators_result = indicators
         st.rerun()
 
-with col4:
-    pass  # пустая колонка
 
 # Вторая строка кнопок (Экспорт)
 col_exp1, col_exp2, col_exp3, col_exp4 = st.columns([1, 1, 1, 1])
@@ -491,12 +491,17 @@ with col_exp2:
 
                 intersection_str = group_sections_for_display(st.session_state.intersection_result)
                 ws.merge_cells(f'A{current_row}:D{current_row}')
+
+                # Применяем границу ко всем ячейкам в диапазоне
+                for col in ['A', 'B', 'C', 'D']:
+                    cell = ws[f'{col}{current_row}']
+                    cell.border = border
+
                 cell = ws[f'A{current_row}']
                 cell.value = f"Общие разделы: {intersection_str}"
                 cell.font = Font(bold=True)
                 cell.fill = highlight_fill
                 cell.alignment = Alignment(wrap_text=True)
-                cell.border = border
                 current_row += 2
 
             # --- ПОКАЗАТЕЛИ ИСПЫТАНИЙ ---
@@ -508,7 +513,7 @@ with col_exp2:
                     std = ind.get('standard', '—')
                     sec = ind.get('section', '—')
                     name = ind.get('name', '')
-                    range_val = ind.get('range', '').replace('<br>', '\n').replace('\r\n', '\n')
+                    range_val = ind.get('range', '').replace('<br>', '\n').replace('\r\n', '\n').strip()
 
                     if '_' in sec:
                         src, num = sec.split('_', 1)
