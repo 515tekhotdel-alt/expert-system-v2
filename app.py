@@ -239,26 +239,22 @@ if build_btn and st.session_state.product_value:
         st.session_state.tnved_table = rows
     else:
         st.session_state.tnved_table = None
-    
+
+    st.write("### 🐞 ПРОВЕРКА УСЛОВИЙ")
+    st.write(f"standard_list: {parse_input_text(st.session_state.standard_value)}")
+    st.write(f"tnved_list: {tnved_list}")
+    st.write(f"product_table exists: {st.session_state.get('product_table') is not None}")
+
     # 3. Таблица Стандартов
     standard_list = parse_input_text(st.session_state.standard_value)
-    if standard_list and tnved_list and st.session_state.product_table:
+    st.session_state.standard_list = standard_list
+
+    if standard_list and tnved_list:
         rows = []
-        all_product_sections = set().union(*[row['_sections'] for row in st.session_state.product_table])
-        
-        st.write("### 🐞 ОТЛАДКА ТАБЛИЦЫ 3")
-        st.write(f"Введённые стандарты: {standard_list}")
-        st.write(f"Введённые ТН ВЭД: {tnved_list}")
-        st.write(f"Разделы продукции: {all_product_sections}")
-        
+
         for std in standard_list:
             std_lower = std.lower()
-            st.write(f"--- Проверяем стандарт: '{std}' ---")
-            
             for code in tnved_list:
-                st.write(f"  ТН ВЭД: '{code}'")
-                found_any = False
-                
                 for section in lab.sections:
                     # Проверяем стандарт
                     full_std_name = std
@@ -268,38 +264,29 @@ if build_btn and st.session_state.product_value:
                             full_std_name = s
                             std_found = True
                             break
-                    
+
                     if not std_found:
                         continue
-                    
+
                     # Проверяем ТН ВЭД
                     tnved_found = False
                     for tn in section.tnved_codes:
                         if code in tn:
                             tnved_found = True
                             break
-                    
+
                     if not tnved_found:
                         continue
-                    
-                    # Проверяем продукцию
-                    if section.full_id not in all_product_sections:
-                        st.write(f"    ❌ Раздел {section.full_id} не в продукции")
-                        continue
-                    
-                    found_any = True
-                    st.write(f"    ✅ НАЙДЕН: раздел {section.full_id}, стандарт {full_std_name}")
-                    
+
+                    # ← БЕЗ ПРОВЕРКИ ПРОДУКЦИИ
+
                     rows.append({
                         'Стандарт': full_std_name,
                         'ТН ВЭД': code,
                         'Разделы': group_sections_for_display({section.full_id}),
                         '_sections': {section.full_id}
                     })
-                
-                if not found_any:
-                    st.write(f"    ❌ Ничего не найдено для '{std}' + '{code}'")
-        
+
         st.session_state.standard_table = rows if rows else None
     else:
         st.session_state.standard_table = None
@@ -413,125 +400,155 @@ with col4:
 col_exp1, col_exp2, col_exp3, col_exp4 = st.columns([1, 1, 1, 1])
 
 with col_exp2:
-    if st.button("📄 Подготовить отчёт", 
+    if st.button("📄 Подготовить отчёт",
                  disabled=not indicators_ready,
                  use_container_width=True,
                  key="btn_prepare_export"):
         if st.session_state.indicators_result:
             import pandas as pd
             import io
-            
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+            from openpyxl.utils.dataframe import dataframe_to_rows
+
             output = io.BytesIO()
-            all_rows = []
-            
-            # Параметры поиска
-            all_rows.append({'Раздел': 'ПАРАМЕТРЫ ПОИСКА', 'Параметр': '', 'Значение': ''})
-            all_rows.append({'Раздел': '', 'Параметр': 'Лаборатория', 'Значение': st.session_state.current_lab})
-            all_rows.append({'Раздел': '', 'Параметр': 'Продукция', 'Значение': st.session_state.product_value})
-            all_rows.append({'Раздел': '', 'Параметр': 'Коды ТН ВЭД', 'Значение': st.session_state.tnved_value})
-            all_rows.append({'Раздел': '', 'Параметр': 'Стандарты', 'Значение': st.session_state.standard_value})
-            all_rows.append({'Раздел': '', 'Параметр': '', 'Значение': ''})
-            
-            # Таблица 1
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Отчёт"
+
+            current_row = 1
+
+            # Стили
+            border_side = Side(style='thin')
+            border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
+            highlight_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+
+
+            def add_section_title(title, row):
+                ws.merge_cells(f'A{row}:D{row}')
+                cell = ws[f'A{row}']
+                cell.value = title
+                cell.font = Font(bold=True, size=12)
+                cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+                cell.alignment = Alignment(horizontal='center')
+                return row + 1
+
+
+            def add_dataframe_to_sheet(df, start_row):
+                for r_idx, row in enumerate(dataframe_to_rows(df, index=False, header=True), start_row):
+                    for c_idx, value in enumerate(row, 1):
+                        cell = ws.cell(row=r_idx, column=c_idx, value=value)
+                        cell.border = border
+                        cell.alignment = Alignment(wrap_text=True, vertical='top')
+                        if r_idx == start_row:
+                            cell.font = Font(bold=True)
+                            cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+                return start_row + len(df) + 2
+
+
+            # --- ПАРАМЕТРЫ ПОИСКА ---
+            current_row = add_section_title("🔍 ПАРАМЕТРЫ ПОИСКА", current_row)
+            params_data = [
+                ['Лаборатория', st.session_state.current_lab],
+                ['Продукция', st.session_state.product_value],
+                ['Коды ТН ВЭД', st.session_state.tnved_value],
+                ['Стандарты', st.session_state.standard_value]
+            ]
+            df_params = pd.DataFrame(params_data, columns=['Параметр', 'Значение'])
+            current_row = add_dataframe_to_sheet(df_params, current_row)
+
+            # --- ТАБЛИЦА 1. ПРОДУКЦИЯ ---
             if st.session_state.get('product_table'):
-                all_rows.append({'Раздел': 'ТАБЛИЦА 1. ПРОДУКЦИЯ', 'Параметр': '', 'Значение': ''})
-                for row in st.session_state.product_table:
-                    all_rows.append({'Раздел': '', 'Параметр': row['Формулировка продукции'], 'Значение': row['Разделы']})
-                all_rows.append({'Раздел': '', 'Параметр': '', 'Значение': ''})
-            
-            # Таблица 2
+                current_row = add_section_title("📦 ТАБЛИЦА 1. ПРОДУКЦИЯ", current_row)
+                df1 = pd.DataFrame(st.session_state.product_table)
+                if '_sections' in df1.columns:
+                    df1 = df1.drop(columns=['_sections'])
+                current_row = add_dataframe_to_sheet(df1, current_row)
+
+            # --- ТАБЛИЦА 2. ТН ВЭД ---
             if st.session_state.get('tnved_table'):
-                all_rows.append({'Раздел': 'ТАБЛИЦА 2. ТН ВЭД', 'Параметр': '', 'Значение': ''})
-                for row in st.session_state.tnved_table:
-                    all_rows.append({'Раздел': '', 'Параметр': row['ТН ВЭД'], 'Значение': row['Разделы']})
-                all_rows.append({'Раздел': '', 'Параметр': '', 'Значение': ''})
-            
-            # Таблица 3
+                current_row = add_section_title("📟 ТАБЛИЦА 2. ТН ВЭД", current_row)
+                df2 = pd.DataFrame(st.session_state.tnved_table)
+                if '_sections' in df2.columns:
+                    df2 = df2.drop(columns=['_sections'])
+                current_row = add_dataframe_to_sheet(df2, current_row)
+
+            # --- ТАБЛИЦА 3. СТАНДАРТЫ ---
             if st.session_state.get('standard_table'):
-                all_rows.append({'Раздел': 'ТАБЛИЦА 3. СТАНДАРТЫ', 'Параметр': '', 'Значение': ''})
-                for row in st.session_state.standard_table:
-                    all_rows.append({
-                        'Раздел': '', 
-                        'Параметр': f"{row['Стандарт']} ({row['ТН ВЭД']})", 
-                        'Значение': row['Разделы']
-                    })
-                all_rows.append({'Раздел': '', 'Параметр': '', 'Значение': ''})
-            
-            # Пересечение
+                current_row = add_section_title("📄 ТАБЛИЦА 3. СТАНДАРТЫ", current_row)
+                df3 = pd.DataFrame(st.session_state.standard_table)
+                if '_sections' in df3.columns:
+                    df3 = df3.drop(columns=['_sections'])
+                if 'Стандарт' in df3.columns and 'ТН ВЭД' in df3.columns:
+                    df3['Стандарт (ТН ВЭД)'] = df3['Стандарт'] + ' (' + df3['ТН ВЭД'] + ')'
+                    df3 = df3[['Стандарт (ТН ВЭД)', 'Разделы']]
+                current_row = add_dataframe_to_sheet(df3, current_row)
+
+            # --- РЕЗУЛЬТАТ ПЕРЕСЕЧЕНИЯ ---
             if st.session_state.get('intersection_result'):
+                current_row = add_section_title("✅ РЕЗУЛЬТАТ ПЕРЕСЕЧЕНИЯ", current_row)
                 from logic import group_sections_for_display
-                all_rows.append({'Раздел': 'РЕЗУЛЬТАТ ПЕРЕСЕЧЕНИЯ', 'Параметр': '', 'Значение': ''})
-                all_rows.append({'Раздел': '', 'Параметр': 'Общие разделы', 'Значение': group_sections_for_display(st.session_state.intersection_result)})
-                all_rows.append({'Раздел': '', 'Параметр': '', 'Значение': ''})
-            
-            # Показатели — ОТДЕЛЬНЫЙ БЛОК С 4 КОЛОНКАМИ
+
+                intersection_str = group_sections_for_display(st.session_state.intersection_result)
+                ws.merge_cells(f'A{current_row}:D{current_row}')
+                cell = ws[f'A{current_row}']
+                cell.value = f"Общие разделы: {intersection_str}"
+                cell.font = Font(bold=True)
+                cell.fill = highlight_fill
+                cell.alignment = Alignment(wrap_text=True)
+                cell.border = border
+                current_row += 2
+
+            # --- ПОКАЗАТЕЛИ ИСПЫТАНИЙ ---
             if st.session_state.indicators_result:
-                # Создаём отдельный DataFrame для показателей
-                indicators_data = []
+                current_row = add_section_title("📋 ПОКАЗАТЕЛИ ИСПЫТАНИЙ", current_row)
+
+                ind_data = []
                 for ind in st.session_state.indicators_result:
                     std = ind.get('standard', '—')
                     sec = ind.get('section', '—')
                     name = ind.get('name', '')
-                    range_val = ind.get('range', '')
-                    
-                    # Форматируем раздел
+                    range_val = ind.get('range', '').replace('<br>', '\n').replace('\r\n', '\n')
+
                     if '_' in sec:
                         src, num = sec.split('_', 1)
                         display_sec = f"{src}:{num}"
                     else:
                         display_sec = sec
-                    
-                    # Стандарт с разделом в скобках
+
                     std_with_sec = f"{std} ({display_sec})"
-                    
-                    # Заменяем <br> и \n на перенос строки для Excel
-                    range_val_excel = range_val.replace('<br>', '\n').replace('\r\n', '\n').replace('\r', '\n')
-                    
-                    indicators_data.append({
-                        'Стандарт': std_with_sec,
+
+                    ind_data.append({
+                        'Стандарт (Раздел)': std_with_sec,
                         'Показатель': name,
-                        'Значение': range_val_excel
+                        'Значение': range_val
                     })
-                
-                df_indicators = pd.DataFrame(indicators_data)
-                
-                # Сохраняем в Excel
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    # Сначала пишем основные данные на лист "Отчёт"
-                    df_main = pd.DataFrame(all_rows)
-                    df_main.to_excel(writer, sheet_name='Отчёт', index=False)
-                    
-                    # Затем показатели на отдельный лист
-                    df_indicators.to_excel(writer, sheet_name='Показатели', index=False)
-                    
-                    # Настраиваем ширину столбцов для листа "Отчёт"
-                    worksheet_main = writer.sheets['Отчёт']
-                    worksheet_main.column_dimensions['A'].width = 30
-                    worksheet_main.column_dimensions['B'].width = 45
-                    worksheet_main.column_dimensions['C'].width = 50
-                    
-                    # Настраиваем ширину и перенос текста для листа "Показатели"
-                    worksheet_ind = writer.sheets['Показатели']
-                    worksheet_ind.column_dimensions['A'].width = 40
-                    worksheet_ind.column_dimensions['B'].width = 35
-                    worksheet_ind.column_dimensions['C'].width = 50
-                    
-                    # Включаем перенос текста для всех ячеек листа "Показатели"
-                    from openpyxl.styles import Alignment
-                    for row in worksheet_ind.iter_rows():
-                        for cell in row:
-                            cell.alignment = Alignment(wrap_text=True)
-            
-            else:
-                # Если показателей нет, просто сохраняем основные данные
-                with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df_main = pd.DataFrame(all_rows)
-                    df_main.to_excel(writer, sheet_name='Отчёт', index=False)
-                    worksheet_main = writer.sheets['Отчёт']
-                    worksheet_main.column_dimensions['A'].width = 30
-                    worksheet_main.column_dimensions['B'].width = 45
-                    worksheet_main.column_dimensions['C'].width = 50
-            
+
+                df_ind = pd.DataFrame(ind_data)
+                current_row = add_dataframe_to_sheet(df_ind, current_row)
+
+            # Автоподбор ширины столбцов
+            for col_letter in ['A', 'B', 'C', 'D']:
+                max_length = 0
+                for row in range(1, ws.max_row + 1):
+                    cell = ws[f'{col_letter}{row}']
+                    try:
+                        if cell.value:
+                            lines = str(cell.value).split('\n')
+                            for line in lines:
+                                max_length = max(max_length, len(line))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 3, 60)
+                ws.column_dimensions[col_letter].width = adjusted_width
+
+            wb.save(output)
+            output.seek(0)
+            st.session_state.export_data = output.getvalue()
+            st.session_state.export_ready = True
+            st.rerun()
+
+            wb.save(output)
             output.seek(0)
             st.session_state.export_data = output.getvalue()
             st.session_state.export_ready = True
