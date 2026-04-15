@@ -38,7 +38,6 @@ def parse_input_text(text: str) -> list:
         text = text.replace(sep, ',')
     return [item.strip() for item in text.split(',') if item.strip()]
 
-
 def clear_form():
     """Очищает поля формы и таблицы."""
     st.session_state.tnved_value = ""
@@ -50,6 +49,8 @@ def clear_form():
     st.session_state.intersection_result = None
     st.session_state.intersection_ready = False
     st.session_state.indicators_result = None
+    st.session_state.select_all_state = False
+    st.session_state.export_ready = False
     # Очищаем чекбоксы
     for key in list(st.session_state.keys()):
         if key.startswith(('prod_cb_', 'tnved_cb_', 'std_cb_')):
@@ -57,7 +58,6 @@ def clear_form():
     st.session_state.product_checkboxes = {}
     st.session_state.tnved_checkboxes = {}
     st.session_state.standard_checkboxes = {}
-
 
 def set_test_data():
     """Заполняет форму тестовыми данными (кроме продукции)."""
@@ -159,21 +159,54 @@ product_input = st_keyup(
 )
 st.session_state.product_value = product_input
 
+# Отслеживаем изменение продукции
+if 'prev_product_value' not in st.session_state:
+    st.session_state.prev_product_value = product_input
 
-# Живые подсказки (только если поле в фокусе)
+if product_input != st.session_state.prev_product_value:
+    st.session_state.prev_product_value = product_input
+    # Сбрасываем таблицы и чекбоксы
+    st.session_state.product_table = None
+    st.session_state.tnved_table = None
+    st.session_state.standard_table = None
+    st.session_state.tables_built = False
+    st.session_state.intersection_result = None
+    st.session_state.intersection_ready = False
+    st.session_state.indicators_result = None
+    st.session_state.select_all_state = False
+    st.session_state.export_ready = False
+    for key in list(st.session_state.keys()):
+        if key.startswith(('prod_cb_', 'tnved_cb_', 'std_cb_')):
+            del st.session_state[key]
+    st.session_state.product_checkboxes = {}
+    st.session_state.tnved_checkboxes = {}
+    st.session_state.standard_checkboxes = {}
+    st.rerun()
+
+# Живые подсказки
 if product_input and len(product_input) >= 2:
     lab = st.session_state.lab
     all_products = lab.get_all_products()
     suggestions = [p for p in all_products if product_input.lower() in p.lower()]
     if suggestions:
-        with st.container():
-            st.markdown(f"**📋 Найдено в области ({len(suggestions)}):**")
-            suggestions_text = ""
-            for s in suggestions[:15]:
-                suggestions_text += f"• {s}\n"
-            if len(suggestions) > 15:
-                suggestions_text += f"... и еще {len(suggestions)-15}"
-            st.text(suggestions_text)
+        st.markdown(f"**📋 Найдено в области ({len(suggestions)}):**")
+        suggestions_text = ""
+        for s in suggestions[:15]:
+            suggestions_text += f"• {s}\n"
+        if len(suggestions) > 15:
+            suggestions_text += f"... и еще {len(suggestions)-15}"
+        st.text(suggestions_text)
+    else:
+        st.warning("❌ Ничего не найдено")
+
+# ============================================================
+# ОТСЛЕЖИВАНИЕ ИЗМЕНЕНИЙ ТН ВЭД И СТАНДАРТОВ
+# ============================================================
+if 'prev_tnved_value' not in st.session_state:
+    st.session_state.prev_tnved_value = st.session_state.tnved_value
+if 'prev_standard_value' not in st.session_state:
+    st.session_state.prev_standard_value = st.session_state.standard_value
+
 
 # ============================================================
 # ФОРМА (ТН ВЭД, Стандарты, кнопки)
@@ -205,8 +238,30 @@ with st.form(key="input_form"):
 
 # После отправки формы сохраняем значения ТН ВЭД и Стандартов
 if build_btn or clear_btn or test_btn:
+    # Проверяем, изменились ли ТН ВЭД или Стандарты
+    if (tnved_input != st.session_state.prev_tnved_value or
+            standard_input != st.session_state.prev_standard_value):
+        # Сбрасываем таблицы и чекбоксы
+        st.session_state.product_table = None
+        st.session_state.tnved_table = None
+        st.session_state.standard_table = None
+        st.session_state.tables_built = False
+        st.session_state.intersection_result = None
+        st.session_state.intersection_ready = False
+        st.session_state.indicators_result = None
+        st.session_state.select_all_state = False
+        st.session_state.export_ready = False
+        for key in list(st.session_state.keys()):
+            if key.startswith(('prod_cb_', 'tnved_cb_', 'std_cb_')):
+                del st.session_state[key]
+        st.session_state.product_checkboxes = {}
+        st.session_state.tnved_checkboxes = {}
+        st.session_state.standard_checkboxes = {}
+
     st.session_state.tnved_value = tnved_input
     st.session_state.standard_value = standard_input
+    st.session_state.prev_tnved_value = tnved_input
+    st.session_state.prev_standard_value = standard_input
 
 # ============================================================
 # ОБРАБОТКА НАЖАТИЯ "ПОСТРОИТЬ ТАБЛИЦЫ"
@@ -298,14 +353,14 @@ if build_btn and st.session_state.product_value:
         st.session_state.standard_table = rows if rows else None
     else:
         st.session_state.standard_table = None
-    
+
     st.session_state.tables_built = True
-    
+
     # Очищаем старые результаты
     st.session_state.intersection_result = None
     st.session_state.intersection_ready = False
     st.session_state.indicators_result = None
-    
+
     # Сбрасываем чекбоксы
     for key in list(st.session_state.keys()):
         if key.startswith(('prod_cb_', 'tnved_cb_', 'std_cb_')):
@@ -313,7 +368,13 @@ if build_btn and st.session_state.product_value:
     st.session_state.product_checkboxes = {}
     st.session_state.tnved_checkboxes = {}
     st.session_state.standard_checkboxes = {}
-    
+
+    # Сбрасываем состояние кнопки "Выбрать все"
+    st.session_state.select_all_state = False
+
+    # Разрешаем сброс чекбоксов при рендеринге
+    st.session_state.tables_just_built = False
+
     st.rerun()
 
 # ============================================================
@@ -594,21 +655,39 @@ if st.session_state.indicators_result is not None:
 # ============================================================
 if st.session_state.tables_built:
     st.markdown("---")
-    
+
+    # Принудительно сбрасываем чекбоксы при первом рендере новых таблиц
+    if 'tables_just_built' not in st.session_state:
+        st.session_state.tables_just_built = False
+
+    if not st.session_state.tables_just_built:
+        # Сбрасываем все чекбоксы
+        for key in list(st.session_state.keys()):
+            if key.startswith(('prod_cb_', 'tnved_cb_', 'std_cb_')):
+                st.session_state[key] = False
+        st.session_state.product_checkboxes = {}
+        st.session_state.tnved_checkboxes = {}
+        st.session_state.standard_checkboxes = {}
+        st.session_state.selected_products = set()
+        st.session_state.selected_tnved = set()
+        st.session_state.selected_standards = set()
+        st.session_state.select_all_state = False
+        st.session_state.tables_just_built = True
+
     if st.session_state.product_table:
         selected = render_product_table(
             st.session_state.product_table,
             st.session_state.selected_products
         )
         st.session_state.selected_products = selected
-    
+
     if st.session_state.tnved_table:
         selected = render_tnved_table(
             st.session_state.tnved_table,
             st.session_state.selected_tnved
         )
         st.session_state.selected_tnved = selected
-    
+
     if st.session_state.standard_table:
         selected = render_standard_table(
             st.session_state.standard_table,
