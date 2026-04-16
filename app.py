@@ -141,6 +141,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+
 # ============================================================
 # САЙДБАР
 # ============================================================
@@ -268,10 +269,10 @@ if build_btn or clear_btn or test_btn:
 # ============================================================
 if build_btn and st.session_state.product_value:
     from logic import search_products, filter_by_tnved, filter_by_standard_and_tnved, group_sections_for_display
-    
+
     lab = st.session_state.lab
     product_query = st.session_state.product_value
-    
+
     # 1. Таблица продукции
     products = search_products(lab, product_query)
     if products:
@@ -286,7 +287,7 @@ if build_btn and st.session_state.product_value:
     else:
         st.warning("❌ Продукция не найдена")
         st.session_state.product_table = None
-    
+
     # 2. Таблица ТН ВЭД
     tnved_list = parse_input_text(st.session_state.tnved_value)
     if tnved_list and st.session_state.product_table:
@@ -303,51 +304,61 @@ if build_btn and st.session_state.product_value:
     else:
         st.session_state.tnved_table = None
 
-    st.write("### 🐞 ПРОВЕРКА УСЛОВИЙ")
-    st.write(f"standard_list: {parse_input_text(st.session_state.standard_value)}")
-    st.write(f"tnved_list: {tnved_list}")
-    st.write(f"product_table exists: {st.session_state.get('product_table') is not None}")
-
     # 3. Таблица Стандартов
     standard_list = parse_input_text(st.session_state.standard_value)
     st.session_state.standard_list = standard_list
 
-    if standard_list and tnved_list:
+    if standard_list:
         rows = []
+
+        # Если ТН ВЭД не введены, ищем без них
+        search_tnved = tnved_list if tnved_list else [None]
 
         for std in standard_list:
             std_lower = std.lower()
-            for code in tnved_list:
+            std_found = False  # Флаг: найден ли этот стандарт хоть где-то
+
+            for code in search_tnved:
+                # Сначала проверим, есть ли вообще такой стандарт
                 for section in lab.sections:
-                    # Проверяем стандарт
                     full_std_name = std
-                    std_found = False
+                    found_in_section = False
                     for s in section.standards:
                         if std_lower in s.lower():
                             full_std_name = s
+                            found_in_section = True
                             std_found = True
                             break
 
-                    if not std_found:
+                    if not found_in_section:
                         continue
 
-                    # Проверяем ТН ВЭД
-                    tnved_found = False
-                    for tn in section.tnved_codes:
-                        if code in tn:
-                            tnved_found = True
-                            break
+                    # Проверяем ТН ВЭД (если заданы)
+                    if code is not None:
+                        tnved_found = False
+                        for tn in section.tnved_codes:
+                            if code in tn:
+                                tnved_found = True
+                                break
+                        if not tnved_found:
+                            continue
 
-                    if not tnved_found:
-                        continue
-
-                    # ← БЕЗ ПРОВЕРКИ ПРОДУКЦИИ
-
+                    # Добавляем строку для каждого найденного раздела
                     rows.append({
                         'Стандарт': full_std_name,
-                        'ТН ВЭД': code,
+                        'ТН ВЭД': code if code else '—',
                         'Разделы': group_sections_for_display({section.full_id}),
                         '_sections': {section.full_id}
+                    })
+
+            # Если стандарт не найден НИ В ОДНОМ разделе — добавляем строку с пометкой
+            if not std_found:
+                for code in search_tnved:
+                    rows.append({
+                        'Стандарт': std,
+                        'ТН ВЭД': code if code else '—',
+                        'Разделы': '❌ Стандарт не найден',
+                        '_sections': set()
                     })
 
         st.session_state.standard_table = rows if rows else None
@@ -371,6 +382,17 @@ if build_btn and st.session_state.product_value:
 
     # Сбрасываем состояние кнопки "Выбрать все"
     st.session_state.select_all_state = False
+
+    # Принудительно сбрасываем все чекбоксы прямо сейчас
+    for key in list(st.session_state.keys()):
+        if key.startswith(('prod_cb_', 'tnved_cb_', 'std_cb_')):
+            st.session_state[key] = False
+    st.session_state.product_checkboxes = {}
+    st.session_state.tnved_checkboxes = {}
+    st.session_state.standard_checkboxes = {}
+    st.session_state.selected_products = set()
+    st.session_state.selected_tnved = set()
+    st.session_state.selected_standards = set()
 
     # Разрешаем сброс чекбоксов при рендеринге
     st.session_state.tables_just_built = False
@@ -649,6 +671,14 @@ if st.session_state.intersection_result is not None:
 
 if st.session_state.indicators_result is not None:
     render_indicators_result(st.session_state.indicators_result)
+
+# ============================================================
+# ОТОБРАЖЕНИЕ ПРЕДУПРЕЖДЕНИЯ О СТАНДАРТЕ
+# ============================================================
+if st.session_state.get('standard_warning_msg'):
+    st.warning(st.session_state.standard_warning_msg)
+    del st.session_state.standard_warning_msg
+
 
 # ============================================================
 # ОТОБРАЖЕНИЕ ТАБЛИЦ
