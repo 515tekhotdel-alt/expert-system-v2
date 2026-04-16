@@ -298,10 +298,23 @@ if build_btn and st.session_state.product_value:
     if tnved_list and st.session_state.product_table:
         rows = []
         all_product_sections = set().union(*[row['_sections'] for row in st.session_state.product_table])
+
         for code in tnved_list:
-            sections = filter_by_tnved(lab, code, all_product_sections)
+            sections = set()
+            matched_codes = set()
+
+            for section in lab.sections:
+                for tn in section.tnved_codes:
+                    if code.startswith(tn):  # введённый код начинается с кода из области
+                        if section.full_id in all_product_sections:
+                            sections.add(section.full_id)
+                            matched_codes.add(tn)
+
+            # Для отображения берём код из области (если нашли)
+            display_code = list(matched_codes)[0] if matched_codes else code
+
             rows.append({
-                'ТН ВЭД': code,
+                'ТН ВЭД': display_code,
                 'Разделы': group_sections_for_display(sections) if sections else '❌ Не найден',
                 '_sections': sections
             })
@@ -315,16 +328,15 @@ if build_btn and st.session_state.product_value:
 
     if standard_list:
         rows = []
+        found_any = False
 
-        # Если ТН ВЭД не введены, ищем без них
         search_tnved = tnved_list if tnved_list else [None]
 
         for std in standard_list:
             std_lower = std.lower()
-            std_found = False  # Флаг: найден ли этот стандарт хоть где-то
+            std_found = False
 
             for code in search_tnved:
-                # Сначала проверим, есть ли вообще такой стандарт
                 for section in lab.sections:
                     full_std_name = std
                     found_in_section = False
@@ -338,25 +350,25 @@ if build_btn and st.session_state.product_value:
                     if not found_in_section:
                         continue
 
-                    # Проверяем ТН ВЭД (если заданы)
                     if code is not None:
                         tnved_found = False
                         for tn in section.tnved_codes:
-                            if code in tn:
+                            if code.startswith(tn):  # ← новая логика
                                 tnved_found = True
+                                matched_tn = tn
                                 break
                         if not tnved_found:
                             continue
+                    else:
+                        matched_tn = '—'
 
-                    # Добавляем строку для каждого найденного раздела
                     rows.append({
                         'Стандарт': full_std_name,
-                        'ТН ВЭД': code if code else '—',
+                        'ТН ВЭД': matched_tn,
                         'Разделы': group_sections_for_display({section.full_id}),
                         '_sections': {section.full_id}
                     })
 
-            # Если стандарт не найден НИ В ОДНОМ разделе — добавляем строку с пометкой
             if not std_found:
                 for code in search_tnved:
                     rows.append({
