@@ -101,5 +101,38 @@ def apply_styles():
             display: none !important;
         }
         
+                /* Красивая подсветка радио-кнопок в сайдбаре */
+        div[data-testid="stRadio"] label {
+            padding: 10px 15px !important;
+            border-radius: 12px !important;
+            margin-bottom: 8px !important;
+            transition: all 0.3s ease !important;
+            font-weight: 500 !important;
+        }
+        
+        /* Подсветка для выбранной ЦТС (фиолетовый градиент) */
+        div[data-testid="stRadio"] label:has(input[value="0"]:checked) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
+        }
+        
+        /* Подсветка для выбранной ТЕХЭКСПЕРТ (зелёный градиент) */
+        div[data-testid="stRadio"] label:has(input[value="1"]:checked) {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4) !important;
+        }
+        
+        /* При наведении на невыбранную */
+        div[data-testid="stRadio"] label:hover {
+            background: rgba(102, 126, 234, 0.1) !important;
+        }
+
+        /* Скрываем меню справа сверху */
+        [data-testid="stMainMenu"] {
+            display: none !important;
+        }
+        
     </style>
     """, unsafe_allow_html=True)

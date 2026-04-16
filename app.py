@@ -131,13 +131,18 @@ init_session_state()
 # ============================================================
 # ЗАГОЛОВОК
 # ============================================================
-# Заголовок с градиентной плашкой только для лаборатории
-lab_class = "lab-cts" if st.session_state.current_lab == "ИЛ ЦТС" else "lab-tehexpert"
+# Заголовок с градиентной плашкой и динамическим значком
+if st.session_state.current_lab == "ИЛ ЦТС":
+    lab_class = "lab-cts"
+    lab_icon = "🧬"
+else:
+    lab_class = "lab-tehexpert"
+    lab_icon = "🧪"
 
 st.markdown(f"""
 <div style="margin-bottom: 20px;">
     <div class="main-title">🔬 Экспертная система ИЛ v2.0</div>
-    <span class="lab-name {lab_class}">🏭 {st.session_state.current_lab}</span>
+    <span class="lab-name {lab_class}">{lab_icon} {st.session_state.current_lab}</span>
 </div>
 """, unsafe_allow_html=True)
 
