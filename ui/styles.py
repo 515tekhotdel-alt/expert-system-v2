@@ -96,6 +96,10 @@ def apply_styles():
             margin-bottom: 5px;
         }
         
+        /* Полностью скрываем меню справа сверху */
+        [data-testid="stMainMenu"] {
+            display: none !important;
+        }
         
     </style>
     """, unsafe_allow_html=True)

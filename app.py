@@ -372,30 +372,19 @@ if build_btn and st.session_state.product_value:
     st.session_state.intersection_ready = False
     st.session_state.indicators_result = None
 
-    # Сбрасываем чекбоксы
+    # Сбрасываем состояние кнопки "Выбрать все"
+    st.session_state.select_all_state = False
+
+    # Удаляем все ключи чекбоксов
     for key in list(st.session_state.keys()):
         if key.startswith(('prod_cb_', 'tnved_cb_', 'std_cb_')):
             del st.session_state[key]
     st.session_state.product_checkboxes = {}
     st.session_state.tnved_checkboxes = {}
     st.session_state.standard_checkboxes = {}
-
-    # Сбрасываем состояние кнопки "Выбрать все"
-    st.session_state.select_all_state = False
-
-    # Принудительно сбрасываем все чекбоксы прямо сейчас
-    for key in list(st.session_state.keys()):
-        if key.startswith(('prod_cb_', 'tnved_cb_', 'std_cb_')):
-            st.session_state[key] = False
-    st.session_state.product_checkboxes = {}
-    st.session_state.tnved_checkboxes = {}
-    st.session_state.standard_checkboxes = {}
     st.session_state.selected_products = set()
     st.session_state.selected_tnved = set()
     st.session_state.selected_standards = set()
-
-    # Разрешаем сброс чекбоксов при рендеринге
-    st.session_state.tables_just_built = False
 
     st.rerun()
 
