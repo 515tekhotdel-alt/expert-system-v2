@@ -53,7 +53,13 @@ def render_sidebar(labs_data: Dict[str, Laboratory], current_lab: str):
         if st.session_state.get("show_log_password", False):
             admin_password = st.text_input("Пароль", type="password", key="log_password")
             if admin_password:
-                if admin_password == st.secrets.get("ADMIN_PASSWORD", "IlCTS2026"):
+                # Пробуем взять пароль из secrets, если нет — используем локальный
+                try:
+                    correct_password = st.secrets["ADMIN_PASSWORD"]
+                except:
+                    correct_password = "IlCTS2026"  # ← ЗАМЕНИТЕ НА СВОЙ ПАРОЛЬ
+
+                if admin_password == correct_password:
                     if os.path.exists("usage_logs.csv"):
                         with open("usage_logs.csv", "rb") as f:
                             st.download_button(
