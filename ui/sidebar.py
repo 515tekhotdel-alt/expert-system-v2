@@ -2,6 +2,7 @@
 import streamlit as st
 from typing import Dict
 from models import Laboratory
+import os
 
 
 def render_sidebar(labs_data: Dict[str, Laboratory], current_lab: str):
@@ -40,23 +41,30 @@ def render_sidebar(labs_data: Dict[str, Laboratory], current_lab: str):
         st.markdown("### 📊 Статистика")
         st.write(f"**Всего разделов:** {len(lab.sections)}")
         st.write(f"**Продукции:** {len(lab.get_all_products())}")
-        st.divider()
-        st.markdown("### 📊 Логи использования")
 
-        # Поле для ввода пароля
-        admin_password = st.text_input("Пароль администратора", type="password", key="admin_pass")
+        # Маленькая серая кнопка в самом низу
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([2, 1, 2])
+        with col2:
+            if st.button("📥", help="Скачать логи", key="download_logs_btn", use_container_width=True):
+                st.session_state.show_log_password = True
 
-        if st.button("📥 Скачать логи (CSV)"):
-            if admin_password == st.secrets["ADMIN_PASSWORD"]:
-                if os.path.exists("usage_logs.csv"):
-                    with open("usage_logs.csv", "rb") as f:
-                        st.download_button(
-                            label="Нажмите для скачивания",
-                            data=f,
-                            file_name="usage_logs.csv",
-                            mime="text/csv"
-                        )
+        # Показываем поле пароля только после нажатия кнопки
+        if st.session_state.get("show_log_password", False):
+            admin_password = st.text_input("Пароль", type="password", key="log_password")
+            if admin_password:
+                if admin_password == st.secrets.get("ADMIN_PASSWORD", "IlCTS2026"):
+                    if os.path.exists("usage_logs.csv"):
+                        with open("usage_logs.csv", "rb") as f:
+                            st.download_button(
+                                label="Скачать CSV",
+                                data=f,
+                                file_name="usage_logs.csv",
+                                mime="text/csv",
+                                key="actual_download"
+                            )
+                        st.session_state.show_log_password = False
+                    else:
+                        st.warning("Логов пока нет")
                 else:
-                    st.warning("Логов пока нет")
-            else:
-                st.error("❌ Неверный пароль")
+                    st.error("❌ Неверный пароль")
