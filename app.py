@@ -520,16 +520,14 @@ with col_exp2:
             border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
             highlight_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
 
-
             def add_section_title(title, row):
-                ws.merge_cells(f'A{row}:D{row}')
+                ws.merge_cells(f'A{row}:B{row}')
                 cell = ws[f'A{row}']
                 cell.value = title
                 cell.font = Font(bold=True, size=12)
                 cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
                 cell.alignment = Alignment(horizontal='center')
                 return row + 1
-
 
             def add_dataframe_to_sheet(df, start_row):
                 for r_idx, row in enumerate(dataframe_to_rows(df, index=False, header=True), start_row):
@@ -541,7 +539,6 @@ with col_exp2:
                             cell.font = Font(bold=True)
                             cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
                 return start_row + len(df) + 2
-
 
             # --- ПАРАМЕТРЫ ПОИСКА ---
             current_row = add_section_title("🔍 ПАРАМЕТРЫ ПОИСКА", current_row)
@@ -585,15 +582,11 @@ with col_exp2:
             if st.session_state.get('intersection_result'):
                 current_row = add_section_title("✅ РЕЗУЛЬТАТ ПЕРЕСЕЧЕНИЯ", current_row)
                 from logic import group_sections_for_display
-
                 intersection_str = group_sections_for_display(st.session_state.intersection_result)
-                ws.merge_cells(f'A{current_row}:D{current_row}')
-
-                # Применяем границу ко всем ячейкам в диапазоне
-                for col in ['A', 'B', 'C', 'D']:
+                ws.merge_cells(f'A{current_row}:B{current_row}')
+                for col in ['A', 'B']:
                     cell = ws[f'{col}{current_row}']
                     cell.border = border
-
                 cell = ws[f'A{current_row}']
                 cell.value = f"Общие разделы: {intersection_str}"
                 cell.font = Font(bold=True)
@@ -605,7 +598,9 @@ with col_exp2:
             if st.session_state.indicators_result:
                 current_row = add_section_title("📋 ПОКАЗАТЕЛИ ИСПЫТАНИЙ", current_row)
 
-                ind_data = []
+                from collections import defaultdict
+                grouped = defaultdict(lambda: defaultdict(list))
+
                 for ind in st.session_state.indicators_result:
                     std = ind.get('standard', '—')
                     sec = ind.get('section', '—')
@@ -618,16 +613,40 @@ with col_exp2:
                     else:
                         display_sec = sec
 
-                    std_with_sec = f"{std} ({display_sec})"
-
-                    ind_data.append({
-                        'Стандарт (Раздел)': std_with_sec,
+                    grouped[std][display_sec].append({
                         'Показатель': name,
                         'Значение': range_val
                     })
 
-                df_ind = pd.DataFrame(ind_data)
-                current_row = add_dataframe_to_sheet(df_ind, current_row)
+                for std, sections in grouped.items():
+                    ws.merge_cells(f'A{current_row}:B{current_row}')
+                    cell = ws[f'A{current_row}']
+                    cell.value = std
+                    cell.font = Font(bold=True, size=12)
+                    cell.fill = PatternFill(start_color="E6E6E6", end_color="E6E6E6", fill_type="solid")
+                    cell.alignment = Alignment(horizontal='left')
+                    current_row += 1
+
+                    for sec, indicators in sections.items():
+                        ws.merge_cells(f'A{current_row}:B{current_row}')
+                        cell = ws[f'A{current_row}']
+                        cell.value = sec
+                        cell.font = Font(bold=True, size=11)
+                        cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+                        cell.alignment = Alignment(horizontal='left')
+                        current_row += 1
+
+                        ind_data = []
+                        for ind in indicators:
+                            ind_data.append({
+                                'Показатель': ind['Показатель'],
+                                'Значение': ind['Значение']
+                            })
+
+                        df_ind = pd.DataFrame(ind_data)
+                        current_row = add_dataframe_to_sheet(df_ind, current_row)
+
+                    current_row += 1
 
             # Автоподбор ширины столбцов
             for col_letter in ['A', 'B', 'C', 'D']:
@@ -650,11 +669,6 @@ with col_exp2:
             st.session_state.export_ready = True
             st.rerun()
 
-            wb.save(output)
-            output.seek(0)
-            st.session_state.export_data = output.getvalue()
-            st.session_state.export_ready = True
-            st.rerun()
 
 with col_exp3:
     if st.session_state.get('export_ready', False):
