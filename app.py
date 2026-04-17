@@ -15,6 +15,42 @@ from ui.results import render_intersection_result, render_indicators_result
 from ui.styles import apply_styles
 from datetime import datetime
 
+import threading
+import requests
+from datetime import datetime
+
+import os
+import csv
+from datetime import datetime
+import streamlit as st
+
+LOG_FILE = "usage_logs.csv"
+
+def init_log_file():
+    """Создаёт файл логов с заголовками, если его нет."""
+    if not os.path.exists(LOG_FILE):
+        with open(LOG_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Дата", "Время", "Лаборатория", "Продукция", "ТН ВЭД", "Стандарты"])
+
+def write_log(lab, product, tnved, standards):
+    """Дописывает строку в CSV-файл."""
+    try:
+        init_log_file()
+        now = datetime.now()
+        with open(LOG_FILE, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                now.strftime("%d.%m.%Y"),
+                now.strftime("%H:%M:%S"),
+                lab,
+                product,
+                tnved,
+                standards
+            ])
+    except Exception:
+        pass  # Логирование не должно влиять на работу приложения
+
 # ============================================================
 # КОНФИГУРАЦИЯ СТРАНИЦЫ
 # ============================================================
@@ -277,6 +313,14 @@ if build_btn and st.session_state.product_value:
 
     lab = st.session_state.lab
     product_query = st.session_state.product_value
+
+    # Логируем действие
+    write_log(
+        lab=st.session_state.current_lab,
+        product=product_query,
+        tnved=st.session_state.tnved_value,
+        standards=st.session_state.standard_value
+    )
 
     # 1. Таблица продукции
     products = search_products(lab, product_query)
