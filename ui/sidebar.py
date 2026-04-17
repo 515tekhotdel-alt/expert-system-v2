@@ -42,10 +42,12 @@ def render_sidebar(labs_data: Dict[str, Laboratory], current_lab: str):
         st.write(f"**Всего разделов:** {len(lab.sections)}")
         st.write(f"**Продукции:** {len(lab.get_all_products())}")
 
-        # Маленькая серая кнопка в самом низу
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        col1, col2, col3 = st.columns([2, 1, 2])
-        with col2:
+        # Отступ до кнопки
+        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+
+        # Маленькая кнопка слева
+        col1, col2 = st.columns([1, 4])
+        with col1:
             if st.button("📥", help="Скачать логи", key="download_logs_btn", use_container_width=True):
                 st.session_state.show_log_password = True
 
