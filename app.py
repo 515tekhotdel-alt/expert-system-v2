@@ -80,6 +80,8 @@ def clear_form():
     """Очищает поля формы и таблицы."""
     st.session_state.tnved_value = ""
     st.session_state.standard_value = ""
+    st.session_state.indicator_value = ""  # ← ДОБАВИТЬ
+    st.session_state.indicator_results = None  # ← ДОБАВИТЬ
     st.session_state.product_table = None
     st.session_state.tnved_table = None
     st.session_state.standard_table = None
