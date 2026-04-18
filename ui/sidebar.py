@@ -42,37 +42,3 @@ def render_sidebar(labs_data: Dict[str, Laboratory], current_lab: str):
         st.write(f"**Всего разделов:** {len(lab.sections)}")
         st.write(f"**Продукции:** {len(lab.get_all_products())}")
 
-        # Отступ до кнопки
-        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
-
-        # Маленькая кнопка слева
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            if st.button("📥", help="Скачать логи", key="download_logs_btn", use_container_width=True):
-                st.session_state.show_log_password = True
-
-        # Показываем поле пароля только после нажатия кнопки
-        if st.session_state.get("show_log_password", False):
-            admin_password = st.text_input("Пароль", type="password", key="log_password")
-            if admin_password:
-                # Пробуем взять пароль из secrets, если нет — используем локальный
-                try:
-                    correct_password = st.secrets["ADMIN_PASSWORD"]
-                except:
-                    correct_password = "IlCTS2026"  # ← ЗАМЕНИТЕ НА СВОЙ ПАРОЛЬ
-
-                if admin_password == correct_password:
-                    if os.path.exists("usage_logs.csv"):
-                        with open("usage_logs.csv", "rb") as f:
-                            st.download_button(
-                                label="Скачать CSV",
-                                data=f,
-                                file_name="usage_logs.csv",
-                                mime="text/csv",
-                                key="actual_download"
-                            )
-                        st.session_state.show_log_password = False
-                    else:
-                        st.warning("Логов пока нет")
-                else:
-                    st.error("❌ Неверный пароль")
