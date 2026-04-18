@@ -90,13 +90,11 @@ def _parse_excel_to_sections(df_raw: pd.DataFrame) -> List[Section]:
                 if obj_clean:
                     section.products.add(obj_clean)
 
-        # Стандарты
+        # Стандарты (НЕ разделяем по ; — сохраняем всю ячейку как один стандарт)
         standards_val = row.get('Документы, устанавливающие правила и методы исследований (испытаний) и измерений', '')
         if pd.notna(standards_val) and str(standards_val).strip():
-            for std in str(standards_val).split(';'):
-                std_clean = std.strip()
-                if std_clean:
-                    section.standards.add(std_clean)
+            std_full = str(standards_val).strip()
+            section.standards.add(std_full)
 
         # ТН ВЭД
         tnved_val = row.get('КОД ТН ВЭД ЕАЭС', '')

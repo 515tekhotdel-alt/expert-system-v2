@@ -47,3 +47,12 @@ class Laboratory:
             section for section in self.sections
             if any(query_lower in product.lower() for product in section.products)
         ]
+
+    def get_all_indicators(self) -> List[str]:
+        """Возвращает все уникальные названия показателей в лаборатории."""
+        indicators = set()
+        for section in self.sections:
+            for ind in section.indicators:
+                if ind.name:
+                    indicators.add(ind.name)
+        return sorted(list(indicators))

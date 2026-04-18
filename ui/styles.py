@@ -134,5 +134,55 @@ def apply_styles():
             display: none !important;
         }
         
+             /* Таблица результатов — без прокруток, с переносом */
+        .stDataFrame {
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+        }
+        .stDataFrame > div {
+            overflow-x: hidden !important;
+        }
+        .stDataFrame table {
+            width: 100% !important;
+            table-layout: fixed !important;
+        }
+        .stDataFrame td, .stDataFrame th {
+            word-wrap: break-word !important;
+            white-space: normal !important;
+            overflow-wrap: break-word !important;
+            padding: 4px 6px !important;
+        }
+        /* Ширина колонок */
+        .stDataFrame th:nth-child(1) { width: 35% !important; }
+        .stDataFrame th:nth-child(2) { width: 10% !important; }
+        .stDataFrame th:nth-child(3) { width: 25% !important; }
+        .stDataFrame th:nth-child(4) { width: 30% !important; }
+        
+        /* Таблица результатов поиска по показателю */
+        .indicator-results-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;  /* ← автоширина */
+            word-wrap: break-word;
+        }
+        .indicator-results-table th, .indicator-results-table td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: top;
+            word-wrap: break-word;
+            white-space: normal;  
+        }
+        .indicator-results-table th {
+            background-color: #f2f2f2;
+            font-weight: 600;
+        }
+        /* Раздел — по содержимому, Стандарт — всё остальное */
+        .indicator-results-table td:nth-child(2) { width: 1%; white-space: nowrap; }  /* Раздел */
+        .indicator-results-table td:nth-child(1) { width: auto; }  /* Стандарт — остальное */
+        .indicator-results-table td:nth-child(3) { width: 25%; }   /* Показатель */
+        .indicator-results-table td:nth-child(4) { width: 30%; }   /* Значение */
+        
+        
     </style>
     """, unsafe_allow_html=True)

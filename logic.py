@@ -200,3 +200,78 @@ def intersect_sections(*sets: Set[str]) -> Set[str]:
         result.intersection_update(s)
     
     return result
+
+
+def find_standards_by_indicator(lab: Laboratory, product_query: str, tnved_list: List[str],
+                                indicator_query: str) -> Dict:
+    """
+    Ищет стандарты, содержащие указанный показатель.
+    Возвращает словарь: {tnved_code: [строки для таблицы]}
+    Если tnved_list пустой — возвращает {"без ТН ВЭД": [строки]}
+    """
+    from models import Section
+
+    # 1. Находим разделы, соответствующие продукции
+    product_sections = set()
+    query_lower = product_query.lower()
+    for section in lab.sections:
+        for prod in section.products:
+            if query_lower in prod.lower():
+                product_sections.add(section.full_id)
+
+    if not product_sections:
+        return {}  # продукция не найдена
+
+    # 2. Для каждого ТН ВЭД (или без него) собираем стандарты
+    result = {}
+    search_tnved = tnved_list if tnved_list else [None]
+
+    for code in search_tnved:
+        rows = []
+        seen = set()  # чтобы не дублировать одинаковые стандарты в одном разделе
+
+        for section in lab.sections:
+            if section.full_id not in product_sections:
+                continue
+
+            # Проверяем ТН ВЭД (если задан)
+            if code is not None:
+                tnved_found = False
+                matched_tn = None
+                for tn in section.tnved_codes:
+                    if code.startswith(tn):
+                        tnved_found = True
+                        matched_tn = tn
+                        break
+                if not tnved_found:
+                    continue
+            else:
+                matched_tn = "—"
+
+            # Ищем показатель в разделе
+            for ind in section.indicators:
+                if indicator_query.lower() in ind.name.lower():
+                    # Ищем стандарты в этом разделе
+                    for std in section.standards:
+                        key = (std, section.full_id)
+                        if key not in seen:
+                            seen.add(key)
+                            # Форматируем раздел для отображения
+                            if '_' in section.full_id:
+                                src, num = section.full_id.split('_', 1)
+                                display_section = f"{src}:{num}"
+                            else:
+                                display_section = section.full_id
+
+                            rows.append({
+                                'Стандарт': std,
+                                'Раздел': display_section,  # ← ЗДЕСЬ ЗАМЕНИТЬ
+                                'Показатель': ind.name,
+                                'Значение': ind.range_value.strip().replace('\n', '<br>'),
+                                'ТН ВЭД': matched_tn if code else "—"
+                            })
+
+        if rows:
+            result[code if code else "без ТН ВЭД"] = rows
+
+    return result

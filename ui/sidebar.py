@@ -33,6 +33,7 @@ def render_sidebar(labs_data: Dict[str, Laboratory], current_lab: str):
         if selected_lab != current_lab:
             st.session_state.current_lab = selected_lab
             st.session_state.lab = labs_data[selected_lab]
+            # НЕ сбрасываем search_mode — оставляем как было
             st.rerun()
 
         st.divider()
@@ -41,4 +42,9 @@ def render_sidebar(labs_data: Dict[str, Laboratory], current_lab: str):
         st.markdown("### 📊 Статистика")
         st.write(f"**Всего разделов:** {len(lab.sections)}")
         st.write(f"**Продукции:** {len(lab.get_all_products())}")
+
+        st.divider()
+        st.markdown("**Режим поиска**")
+        from ui.inputs import render_mode_selector
+        mode = render_mode_selector()
 
