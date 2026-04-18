@@ -36,12 +36,6 @@ def render_sidebar(labs_data: Dict[str, Laboratory], current_lab: str):
             # НЕ сбрасываем search_mode — оставляем как было
             st.rerun()
 
-        st.divider()
-
-        lab = labs_data[current_lab]
-        st.markdown("### 📊 Статистика")
-        st.write(f"**Всего разделов:** {len(lab.sections)}")
-        st.write(f"**Продукции:** {len(lab.get_all_products())}")
 
         st.divider()
         st.markdown("**Режим поиска**")

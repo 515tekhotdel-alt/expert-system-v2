@@ -111,24 +111,24 @@ def apply_styles():
         }
         
         /* ЛАБОРАТОРИИ — фиолетовый и зелёный */
-        [data-testid="stSidebar"] [data-testid="stRadio"]:first-of-type label:has(input[value="0"]:checked) {
+        div[role="radiogroup"][aria-label="🔍 Выберите лабораторию:"] label:has(input[value="0"]:checked) {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
             color: white !important;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
         }
-        [data-testid="stSidebar"] [data-testid="stRadio"]:first-of-type label:has(input[value="1"]:checked) {
+        div[role="radiogroup"][aria-label="🔍 Выберите лабораторию:"] label:has(input[value="1"]:checked) {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
             color: white !important;
             box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4) !important;
         }
         
         /* РЕЖИМ ПОИСКА — синий и оранжевый */
-        [data-testid="stSidebar"] [data-testid="stRadio"]:nth-of-type(2) label:has(input[value="0"]:checked) {
+        div[role="radiogroup"][aria-label="Режим поиска"] label:has(input[value="0"]:checked) {
             background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%) !important;
             color: white !important;
             box-shadow: 0 4px 15px rgba(33, 147, 176, 0.4) !important;
         }
-        [data-testid="stSidebar"] [data-testid="stRadio"]:nth-of-type(2) label:has(input[value="1"]:checked) {
+        div[role="radiogroup"][aria-label="Режим поиска"] label:has(input[value="1"]:checked) {
             background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%) !important;
             color: white !important;
             box-shadow: 0 4px 15px rgba(242, 153, 74, 0.4) !important;
