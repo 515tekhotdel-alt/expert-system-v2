@@ -7,7 +7,7 @@ import os
 
 def render_sidebar(labs_data: Dict[str, Laboratory], current_lab: str):
     with st.sidebar:
-        st.header("🔬 Лаборатория")
+        st.header("Лаборатория")
 
         lab_options = list(labs_data.keys())
 
