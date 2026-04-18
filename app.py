@@ -619,11 +619,153 @@ if st.session_state.get("search_mode") != "Поиск по показателя�
 col_exp1, col_exp2, col_exp3, col_exp4 = st.columns([1, 1, 1, 1])
 
 with col_exp2:
+    # Определяем, активна ли кнопка
+    if st.session_state.get("search_mode") == "Поиск по показателям":
+        export_disabled = not st.session_state.get("indicator_results")
+    else:
+        export_disabled = not st.session_state.get("indicators_result")
+
     if st.button("📄 Подготовить отчёт",
-                 disabled=not indicators_ready,
+                 disabled=export_disabled,
                  use_container_width=True,
                  key="btn_prepare_export"):
-        if st.session_state.indicators_result:
+
+        # ============================================================
+        # ЭКСПОРТ ДЛЯ РЕЖИМА "ПОКАЗАТЕЛИ"
+        # ============================================================
+        if st.session_state.get("search_mode") == "Поиск по показателям" and st.session_state.get("indicator_results"):
+            import pandas as pd
+            import io
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+            from openpyxl.utils.dataframe import dataframe_to_rows
+
+            output = io.BytesIO()
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Отчёт"
+
+            current_row = 1
+
+            border_side = Side(style='thin')
+            border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
+
+
+            def add_section_title(title, row):
+                ws.merge_cells(f'A{row}:D{row}')
+                cell = ws[f'A{row}']
+                cell.value = title
+                cell.font = Font(bold=True, size=12)
+                cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+                cell.alignment = Alignment(horizontal='center')
+                return row + 1
+
+
+            def add_dataframe_to_sheet(df, start_row):
+                for r_idx, row in enumerate(dataframe_to_rows(df, index=False, header=True), start_row):
+                    for c_idx, value in enumerate(row, 1):
+                        cell = ws.cell(row=r_idx, column=c_idx, value=value)
+                        cell.border = border
+                        cell.alignment = Alignment(wrap_text=True, vertical='top')
+                        if r_idx == start_row:
+                            cell.font = Font(bold=True)
+                            cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+                return start_row + len(df) + 2
+
+
+            # --- ПАРАМЕТРЫ ПОИСКА ---
+            current_row = add_section_title("🔍 ПАРАМЕТРЫ ПОИСКА", current_row)
+            params_data = [
+                ['Лаборатория', st.session_state.current_lab],
+                ['Продукция', st.session_state.product_value],
+                ['Коды ТН ВЭД', st.session_state.tnved_value],
+                ['Показатель', st.session_state.get("indicator_value", "")]
+            ]
+            df_params = pd.DataFrame(params_data, columns=['Параметр', 'Значение'])
+            current_row = add_dataframe_to_sheet(df_params, current_row)
+
+            # --- ТАБЛИЦА 1. ПРОДУКЦИЯ ---
+            if st.session_state.get('product_table'):
+                current_row = add_section_title("📦 ТАБЛИЦА 1. ПРОДУКЦИЯ", current_row)
+                df1 = pd.DataFrame(st.session_state.product_table)
+                if '_sections' in df1.columns:
+                    df1 = df1.drop(columns=['_sections'])
+                current_row = add_dataframe_to_sheet(df1, current_row)
+
+            # --- ТАБЛИЦА 2. ТН ВЭД ---
+            if st.session_state.get('tnved_table'):
+                current_row = add_section_title("📟 ТАБЛИЦА 2. ТН ВЭД", current_row)
+                df2 = pd.DataFrame(st.session_state.tnved_table)
+                if '_sections' in df2.columns:
+                    df2 = df2.drop(columns=['_sections'])
+                current_row = add_dataframe_to_sheet(df2, current_row)
+
+            # --- РЕЗУЛЬТАТЫ ПОИСКА ПО ПОКАЗАТЕЛЮ ---
+            if st.session_state.get('indicator_results'):
+                current_row = add_section_title("📋 РЕЗУЛЬТАТЫ ПОИСКА ПО ПОКАЗАТЕЛЮ", current_row)
+
+                for tnved_code, rows in st.session_state.indicator_results.items():
+                    if tnved_code == "без ТН ВЭД":
+                        section_title = "🔍 Без ТН ВЭД"
+                    else:
+                        section_title = f"📟 ТН ВЭД: {tnved_code}"
+
+                    ws.merge_cells(f'A{current_row}:D{current_row}')
+                    cell = ws[f'A{current_row}']
+                    cell.value = section_title
+                    cell.font = Font(bold=True, size=11)
+                    cell.fill = PatternFill(start_color="E6E6E6", end_color="E6E6E6", fill_type="solid")
+                    cell.alignment = Alignment(horizontal='left')
+                    current_row += 1
+
+                    if rows:
+                        # Копируем данные, чтобы не испортить интерфейс
+                        excel_rows = []
+                        for row in rows:
+                            excel_row = row.copy()
+                            if 'Значение' in excel_row:
+                                excel_row['Значение'] = excel_row['Значение'].replace('<br>', '\n').replace('\r\n',
+                                                                                                            '\n')
+                            excel_rows.append(excel_row)
+
+                        df_ind = pd.DataFrame(excel_rows)
+                        if 'ТН ВЭД' in df_ind.columns:
+                            df_ind = df_ind.drop(columns=['ТН ВЭД'])
+                        current_row = add_dataframe_to_sheet(df_ind, current_row)
+                    else:
+                        ws.merge_cells(f'A{current_row}:D{current_row}')
+                        cell = ws[f'A{current_row}']
+                        cell.value = "❌ Стандарты не найдены"
+                        cell.alignment = Alignment(horizontal='left')
+                        current_row += 2
+
+                    current_row += 1
+
+            # Автоподбор ширины столбцов
+            for col_letter in ['A', 'B', 'C', 'D']:
+                max_length = 0
+                for row in range(1, ws.max_row + 1):
+                    cell = ws[f'{col_letter}{row}']
+                    try:
+                        if cell.value:
+                            lines = str(cell.value).split('\n')
+                            for line in lines:
+                                max_length = max(max_length, len(line))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 3, 60)
+                ws.column_dimensions[col_letter].width = adjusted_width
+
+            wb.save(output)
+            output.seek(0)
+            st.session_state.export_data = output.getvalue()
+            st.session_state.export_ready = True
+            st.rerun()
+
+        # ============================================================
+        # ЭКСПОРТ ДЛЯ РЕЖИМА "СТАНДАРТЫ"
+        # ============================================================
+        elif st.session_state.indicators_result:
             import pandas as pd
             import io
             from openpyxl import Workbook
@@ -661,13 +803,6 @@ with col_exp2:
                         if r_idx == start_row:
                             cell.font = Font(bold=True)
                             cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-
-                    # Автоподбор высоты строки
-                    ws.row_dimensions[r_idx].auto_size = True
-                    # Подстраховка: минимальная высота
-                    if ws.row_dimensions[r_idx].height and ws.row_dimensions[r_idx].height < 30:
-                        ws.row_dimensions[r_idx].height = 30
-
                 return start_row + len(df) + 2
 
 
@@ -794,7 +929,6 @@ with col_exp2:
             st.session_state.export_data = output.getvalue()
             st.session_state.export_ready = True
             st.rerun()
-
 with col_exp3:
     if st.session_state.get('export_ready', False):
         st.download_button(
