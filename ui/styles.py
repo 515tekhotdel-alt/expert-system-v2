@@ -68,8 +68,8 @@ def apply_styles():
             font-weight: 600 !important;
             margin: 8px 0px 3px 0px !important;
         }
-           
-               /* Градиентный заголовок лаборатории */
+        
+        /* Градиентный заголовок лаборатории */
         .lab-name {
             display: inline-block;
             padding: 12px 30px;
@@ -96,12 +96,12 @@ def apply_styles():
             margin-bottom: 5px;
         }
         
-        /* Полностью скрываем меню справа сверху */
+        /* Скрываем меню справа сверху */
         [data-testid="stMainMenu"] {
             display: none !important;
         }
         
-                /* Красивая подсветка радио-кнопок в сайдбаре */
+        /* Общие стили для всех radio */
         div[data-testid="stRadio"] label {
             padding: 10px 15px !important;
             border-radius: 12px !important;
@@ -110,59 +110,40 @@ def apply_styles():
             font-weight: 500 !important;
         }
         
-        /* Подсветка для выбранной ЦТС (фиолетовый градиент) */
-        div[data-testid="stRadio"] label:has(input[value="0"]:checked) {
+        /* ЛАБОРАТОРИИ — фиолетовый и зелёный */
+        [data-testid="stSidebar"] [data-testid="stRadio"]:first-of-type label:has(input[value="0"]:checked) {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
             color: white !important;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
         }
-        
-        /* Подсветка для выбранной ТЕХЭКСПЕРТ (зелёный градиент) */
-        div[data-testid="stRadio"] label:has(input[value="1"]:checked) {
+        [data-testid="stSidebar"] [data-testid="stRadio"]:first-of-type label:has(input[value="1"]:checked) {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
             color: white !important;
             box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4) !important;
         }
         
-        /* При наведении на невыбранную */
+        /* РЕЖИМ ПОИСКА — синий и оранжевый */
+        [data-testid="stSidebar"] [data-testid="stRadio"]:nth-of-type(2) label:has(input[value="0"]:checked) {
+            background: linear-gradient(135deg, #2193b0 0%, #6dd5ed 100%) !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(33, 147, 176, 0.4) !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stRadio"]:nth-of-type(2) label:has(input[value="1"]:checked) {
+            background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%) !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(242, 153, 74, 0.4) !important;
+        }
+        
+        /* При наведении */
         div[data-testid="stRadio"] label:hover {
             background: rgba(102, 126, 234, 0.1) !important;
         }
-
-        /* Скрываем меню справа сверху */
-        [data-testid="stMainMenu"] {
-            display: none !important;
-        }
-        
-             /* Таблица результатов — без прокруток, с переносом */
-        .stDataFrame {
-            max-width: 100% !important;
-            overflow-x: hidden !important;
-        }
-        .stDataFrame > div {
-            overflow-x: hidden !important;
-        }
-        .stDataFrame table {
-            width: 100% !important;
-            table-layout: fixed !important;
-        }
-        .stDataFrame td, .stDataFrame th {
-            word-wrap: break-word !important;
-            white-space: normal !important;
-            overflow-wrap: break-word !important;
-            padding: 4px 6px !important;
-        }
-        /* Ширина колонок */
-        .stDataFrame th:nth-child(1) { width: 35% !important; }
-        .stDataFrame th:nth-child(2) { width: 10% !important; }
-        .stDataFrame th:nth-child(3) { width: 25% !important; }
-        .stDataFrame th:nth-child(4) { width: 30% !important; }
         
         /* Таблица результатов поиска по показателю */
         .indicator-results-table {
             width: 100%;
             border-collapse: collapse;
-            table-layout: auto;  /* ← автоширина */
+            table-layout: auto;
             word-wrap: break-word;
         }
         .indicator-results-table th, .indicator-results-table td {
@@ -171,18 +152,25 @@ def apply_styles():
             text-align: left;
             vertical-align: top;
             word-wrap: break-word;
-            white-space: normal;  
+            white-space: normal;
         }
         .indicator-results-table th {
             background-color: #f2f2f2;
             font-weight: 600;
         }
-        /* Раздел — по содержимому, Стандарт — всё остальное */
-        .indicator-results-table td:nth-child(2) { width: 1%; white-space: nowrap; }  /* Раздел */
-        .indicator-results-table td:nth-child(1) { width: auto; }  /* Стандарт — остальное */
-        .indicator-results-table td:nth-child(3) { width: 25%; }   /* Показатель */
-        .indicator-results-table td:nth-child(4) { width: 30%; }   /* Значение */
-        
+        .indicator-results-table td:nth-child(2) {
+            width: 1%;
+            white-space: nowrap;
+        }
+        .indicator-results-table td:nth-child(1) {
+            width: auto;
+        }
+        .indicator-results-table td:nth-child(3) {
+            width: 25%;
+        }
+        .indicator-results-table td:nth-child(4) {
+            width: 30%;
+        }
         
     </style>
     """, unsafe_allow_html=True)

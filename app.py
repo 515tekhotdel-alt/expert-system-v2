@@ -249,7 +249,19 @@ if product_input and len(product_input) >= 2:
 # ============================================================
 if st.session_state.get("search_mode") == "Поиск по показателям":
     from ui.inputs import render_indicator_input
+
     indicator_input = render_indicator_input(st.session_state.get("indicator_value", ""))
+
+    # Отслеживаем изменение показателя
+    if 'prev_indicator_value' not in st.session_state:
+        st.session_state.prev_indicator_value = indicator_input
+
+    if indicator_input != st.session_state.prev_indicator_value:
+        st.session_state.prev_indicator_value = indicator_input
+        # Сбрасываем таблицы
+        st.session_state.indicator_results = None
+        st.session_state.tables_built = False
+
     st.session_state.indicator_value = indicator_input
 
 # Живые подсказки для показателя (только в режиме "Показатели")
